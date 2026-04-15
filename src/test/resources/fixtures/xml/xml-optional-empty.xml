@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-optional-empty.xml
+     Purpose: prove that an empty optional element produces INFO (not CRITICAL).
+     Pairs with: required-optional-fields.xsd
+     Expected: optionalField classified as empty=true; INFO (not CRITICAL) when paired with XSD.
+-->
+<record>
+  <requiredField>present value</requiredField>
+  <optionalField></optionalField>
+  <nillableField>present value</nillableField>
+</record>

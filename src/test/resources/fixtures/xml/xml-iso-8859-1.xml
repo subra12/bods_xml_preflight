@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- Fixture: xml-iso-8859-1.xml
+     Purpose: prove that non-UTF-8 encoding is detected, an INFO issue is raised,
+              and the xml_header recommendation is set to the explicit declaration string.
+     Note: only ASCII characters are used so the file is byte-for-byte safe across
+           both UTF-8 and ISO-8859-1 storage. The declared encoding is what matters.
+     Expected: encoding=ISO-8859-1, INFO issue present, xml_header != NULL.
+-->
+<customer>
+  <customerId>1</customerId>
+  <email>alice@example.com</email>
+</customer>

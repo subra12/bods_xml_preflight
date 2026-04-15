@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-root-mismatch.xml
+     Purpose: prove root mismatch detection when XML root matches neither the XSD root
+              nor the XSD single repeating child.
+     Pairs with: root-wrapper-unbounded-child.xsd (root=allCustomers, child=customer)
+     Expected: root match FAIL, ERROR issue.
+-->
+<wrongRoot>
+  <customerId>1</customerId>
+  <name>Alice</name>
+</wrongRoot>

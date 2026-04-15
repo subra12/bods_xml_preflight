@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-required-empty.xml
+     Purpose: prove that an empty required element is detected and classified as CRITICAL
+              by the CrossValidator.
+     Pairs with: required-optional-fields.xsd
+     Expected: requiredField classified as empty=true; CRITICAL when paired with XSD.
+-->
+<record>
+  <requiredField></requiredField>
+  <optionalField>present value</optionalField>
+  <nillableField>present value</nillableField>
+</record>

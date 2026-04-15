@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<billingAddress>
+  <customerId>1001</customerId>
+  <addressLine1>125 Market Street</addressLine1>
+  <addressLine2>Suite 400</addressLine2>
+  <city>Chicago</city>
+  <postalCode>60601</postalCode>
+  <active>true</active>
+  <effectiveDate>2026-04-14</effectiveDate>
+</billingAddress>

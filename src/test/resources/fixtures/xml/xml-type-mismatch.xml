@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-type-mismatch.xml
+     Purpose: prove type validation — each typed field carries an invalid value so that
+              CrossValidator reports one ERROR per field.
+     Pairs with: typed-fields.xsd
+     Expected: 5 type-mismatch ERRORs (countField, priceField, startDate, createdAt, activeFlag).
+               textField (xs:string) is always valid and must not produce an issue.
+-->
+<typedRecord>
+  <textField>valid string — no error expected</textField>
+  <countField>not-an-integer</countField>
+  <priceField>not-decimal</priceField>
+  <startDate>2026/04/14</startDate>
+  <createdAt>not-a-datetime</createdAt>
+  <activeFlag>maybe</activeFlag>
+</typedRecord>

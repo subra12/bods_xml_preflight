@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<billingAddress xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <customerId>1002</customerId>
+  <addressLine1>900 Lake Shore Drive</addressLine1>
+  <addressLine2 xsi:nil="true"/>
+  <city>Chicago</city>
+  <postalCode/>
+  <active>true</active>
+  <effectiveDate>2026-04-14</effectiveDate>
+</billingAddress>

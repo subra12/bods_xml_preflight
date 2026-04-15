@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: root-direct.xsd
+     Purpose: prove that a schema whose root element is itself the logical data element
+              produces is_top_level_element = 1 (no unbounded wrapper child).
+     Expected: rootElementName=customer, rootHasSingleUnboundedChild=false, candidate=1
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="customer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="customerId" type="xs:integer" minOccurs="1" nillable="false"/>
+        <xs:element name="email"      type="xs:string"  minOccurs="0" nillable="false"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

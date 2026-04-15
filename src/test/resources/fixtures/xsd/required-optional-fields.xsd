@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: required-optional-fields.xsd
+     Purpose: prove required vs optional field classification.
+     Expected:
+       requiredField: minOccurs=1, nillable=false  -> required=true
+       optionalField: minOccurs=0                  -> optional=true
+       nillableField: minOccurs=1, nillable=true   -> required=false (nillable overrides), optional=false
+     totalRequiredElements=2 (record root + requiredField)
+     totalOptionalElements=1 (optionalField)
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="record">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="requiredField" type="xs:string" minOccurs="1" nillable="false"/>
+        <xs:element name="optionalField" type="xs:string" minOccurs="0" nillable="false"/>
+        <xs:element name="nillableField" type="xs:string" minOccurs="1" nillable="true"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

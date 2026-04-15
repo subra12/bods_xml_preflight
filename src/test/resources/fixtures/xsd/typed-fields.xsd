@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: typed-fields.xsd
+     Purpose: prove data type extraction and type-validation mapping for all XSD types
+              supported by CrossValidator.
+     Expected: each leaf element's dataType matches the xs: type declared below.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="typedRecord">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="textField"   type="xs:string"   minOccurs="1" nillable="false"/>
+        <xs:element name="countField"  type="xs:integer"  minOccurs="1" nillable="false"/>
+        <xs:element name="priceField"  type="xs:decimal"  minOccurs="1" nillable="false"/>
+        <xs:element name="startDate"   type="xs:date"     minOccurs="0" nillable="false"/>
+        <xs:element name="createdAt"   type="xs:dateTime" minOccurs="0" nillable="false"/>
+        <xs:element name="activeFlag"  type="xs:boolean"  minOccurs="0" nillable="false"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

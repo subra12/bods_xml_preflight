@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-utf8.xml
+     Purpose: prove UTF-8 encoding detection and xml_header recommendation of NULL.
+     Expected: encoding=UTF-8, xmlDeclaration not null, character count < 4000, no WARNING.
+-->
+<customer>
+  <customerId>1</customerId>
+  <email>test@example.com</email>
+</customer>

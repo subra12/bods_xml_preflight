@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: root-ambiguous.xsd
+     Purpose: prove AMBIGUOUS detection when the root element contains more than one
+              unbounded child, making it impossible to confidently determine
+              is_top_level_element.
+     Expected: topLevelElementRecommendationCandidate=AMBIGUOUS, WARNING issue present.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="document">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="header" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="title" type="xs:string" minOccurs="1" nillable="false"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="line" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="amount" type="xs:decimal" minOccurs="1" nillable="false"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

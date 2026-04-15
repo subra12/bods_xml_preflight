@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-required-nil.xml
+     Purpose: prove that xsi:nil="true" on a required element is detected and classified
+              as CRITICAL by the CrossValidator.
+     Pairs with: required-optional-fields.xsd
+     Expected: requiredField classified as nilAttribute=true; CRITICAL when paired with XSD.
+-->
+<record xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <requiredField xsi:nil="true"/>
+  <optionalField>present value</optionalField>
+  <nillableField>present value</nillableField>
+</record>

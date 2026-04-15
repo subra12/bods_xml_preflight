@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-root-matches-root.xml
+     Purpose: prove XML root matching XSD root element (is_top_level_element = 1 path).
+     Pairs with: root-direct.xsd (root element = customer)
+     Expected: root match PASS, recommendation candidate 1.
+-->
+<customer>
+  <customerId>1</customerId>
+  <email>test@example.com</email>
+</customer>

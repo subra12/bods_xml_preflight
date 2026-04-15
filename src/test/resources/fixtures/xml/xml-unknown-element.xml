@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-unknown-element.xml
+     Purpose: prove detection of an XML element that is absent from the paired XSD.
+     Pairs with: required-optional-fields.xsd
+     Expected: unknownField produces WARNING; all required fields are present so no CRITICAL.
+-->
+<record>
+  <requiredField>present value</requiredField>
+  <optionalField>present value</optionalField>
+  <nillableField>present value</nillableField>
+  <unknownField>extra data not in schema</unknownField>
+</record>

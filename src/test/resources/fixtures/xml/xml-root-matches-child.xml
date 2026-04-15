@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-root-matches-child.xml
+     Purpose: prove XML root matching the single repeating child in the XSD wrapper pattern
+              (is_top_level_element = 0 path).
+     Pairs with: root-wrapper-unbounded-child.xsd (wrapper=allCustomers, child=customer)
+     Expected: child match PASS, recommendation candidate 0.
+-->
+<customer>
+  <customerId>1</customerId>
+  <name>Alice</name>
+</customer>

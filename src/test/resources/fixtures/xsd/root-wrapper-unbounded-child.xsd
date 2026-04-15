@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: root-wrapper-unbounded-child.xsd
+     Purpose: prove detection of a wrapper root that encloses a single unbounded child,
+              which is the classic BODS is_top_level_element = 0 pattern.
+     Expected: rootElementName=allCustomers, singleChildElementName=customer,
+               rootHasSingleUnboundedChild=true, candidate=0
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="allCustomers">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="customer" maxOccurs="unbounded">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="customerId" type="xs:integer" minOccurs="1" nillable="false"/>
+              <xs:element name="name"       type="xs:string"  minOccurs="1" nillable="false"/>
+              <xs:element name="email"      type="xs:string"  minOccurs="0" nillable="false"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

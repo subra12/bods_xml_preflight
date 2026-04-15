@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<billingAddress>
+  <customerId>1005</customerId>
+  <addressLine1>77 State Street</addressLine1>
+  <city>Chicago</city>
+  <postalCode>60603</postalCode>
+  <active>true</active>
+  <deliveryInstructions>Leave with building concierge.</deliveryInstructions>
+</billingAddress>

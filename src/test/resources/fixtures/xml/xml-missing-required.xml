@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-missing-required.xml
+     Purpose: prove that a required XSD element absent from the XML produces ERROR.
+     Pairs with: required-optional-fields.xsd
+     Expected: requiredField is missing from XML entirely; ERROR (not CRITICAL) from CrossValidator.
+-->
+<record>
+  <optionalField>present value</optionalField>
+  <nillableField>present value</nillableField>
+</record>
