@@ -323,3 +323,52 @@ Or right-click any test class (e.g. `EndToEndTest`) → **Run As → JUnit Test*
 Tests run: 50, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+
+---
+
+## Testing Your Own XML and XSD Files
+
+You can point the tool at any XML/XSD pair without modifying the project.
+
+### Basic run
+
+```bash
+java -jar target/bods-preflight-1.0.0-SNAPSHOT.jar \
+  --xml path/to/your/file.xml \
+  --xsd path/to/your/schema.xsd
+```
+
+Paths can be absolute or relative to the folder where you run the command.
+
+### Save the report to a file
+
+```bash
+java -jar target/bods-preflight-1.0.0-SNAPSHOT.jar \
+  --xml path/to/your/file.xml \
+  --xsd path/to/your/schema.xsd \
+  --output report.txt
+```
+
+### Get an HTML report
+
+```bash
+java -jar target/bods-preflight-1.0.0-SNAPSHOT.jar \
+  --xml path/to/your/file.xml \
+  --xsd path/to/your/schema.xsd \
+  --format html \
+  --output report.html
+```
+
+Open `report.html` in a browser.
+
+### Running from Eclipse (no JAR needed)
+
+If you are on the target machine and have not built the JAR yet, use a Run Configuration as described in the **Deploying into Eclipse** section above. Paste your file paths into the **Arguments** tab and click Run.
+
+### Making a pair a permanent fixture
+
+If you want the new files tested automatically every time `mvn test` runs:
+
+1. Create a new folder under `fixtures/pairs/`, for example `fixtures/pairs/my-scenario/`.
+2. Place your files there as `sample.xml` and `sample.xsd`.
+3. Add a test method to [EndToEndTest.java](src/test/java/com/bods/preflight/integration/EndToEndTest.java) following the same pattern as the existing tests.
