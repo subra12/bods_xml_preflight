@@ -30,31 +30,72 @@ public class CrossValidator {
     private void evaluateRootMatch(XsdAnalysisResult xsd, XmlAnalysisResult xml, ValidationResult result) {
         if (xml.getRootElementName().equals(xsd.getRootElementName())) {
             result.setRootMatch(true);
-            result.setRootMatchExplanation("PASS (root match - is_top_level_element = 1)");
+            result.setRootMatchExplanation(
+                    "PASS — XML root <" + xml.getRootElementName() + "> matches XSD root element directly. "
+                    + "Set is_top_level_element = 1 in BODS.");
             return;
         }
-        if (xsd.getSingleChildElementName() != null && xml.getRootElementName().equals(xsd.getSingleChildElementName())) {
+        if (xsd.getSingleChildElementName() != null
+                && xml.getRootElementName().equals(xsd.getSingleChildElementName())) {
             result.setRootMatch(true);
             result.setChildRootMatch(true);
-            result.setRootMatchExplanation("PASS (child match - is_top_level_element = 0)");
+            result.setRootMatchExplanation(
+                    "PASS — XML root <" + xml.getRootElementName() + "> matches the repeating child element "
+                    + "inside XSD wrapper <" + xsd.getRootElementName() + ">. "
+                    + "Set is_top_level_element = 0 in BODS.");
             return;
         }
         result.setRootMatch(false);
-        result.setRootMatchExplanation("FAIL (XML root '" + xml.getRootElementName() + "' does not match XSD root '"
-                + xsd.getRootElementName() + "' or child '" + xsd.getSingleChildElementName() + "')");
-        result.addIssue(new Issue(Severity.ERROR, "CrossValidation", result.getRootMatchExplanation(), null,
-                "Review the XML root and the is_top_level_element setting."));
+        String explanation = "FAIL — XML root <" + xml.getRootElementName() + "> does not match "
+                + "XSD root <" + xsd.getRootElementName() + ">"
+                + (xsd.getSingleChildElementName() != null
+                        ? " or its repeating child <" + xsd.getSingleChildElementName() + ">" : "")
+                + ". Verify the correct XML file and XSD schema are paired.";
+        result.setRootMatchExplanation(explanation);
+        result.addIssue(new Issue(Severity.ERROR, "CrossValidation", explanation, null,
+                "Check is_top_level_element and ensure the XML root matches the XSD."));
     }
 
     private void evaluateNamespace(XsdAnalysisResult xsd, XmlAnalysisResult xml, ValidationResult result) {
-        String xsdNamespace = emptyToNull(xsd.getRootNamespace());
-        String xmlNamespace = emptyToNull(xml.getRootNamespace());
-        boolean match = xsdNamespace == null || xmlNamespace == null || xsdNamespace.equals(xmlNamespace);
+        String xsdNs = emptyToNull(xsd.getRootNamespace());
+        String xmlNs = emptyToNull(xml.getRootNamespace());
+        boolean match = xsdNs == null || xmlNs == null || xsdNs.equals(xmlNs);
         result.setNamespaceMatch(match);
         if (!match) {
+            String diffHint = buildNamespaceDiffHint(xmlNs, xsdNs);
             result.addIssue(new Issue(Severity.WARNING, "CrossValidation",
-                    "Namespace mismatch between XML and XSD.", null, "Ensure XML uses the expected schema namespace."));
+                    "Namespace mismatch between XML and XSD root elements."
+                    + " XML namespace : \"" + xmlNs + "\""
+                    + " | XSD namespace : \"" + xsdNs + "\""
+                    + diffHint,
+                    null,
+                    "Ensure the XML root element uses the namespace declared in the XSD targetNamespace."));
         }
+    }
+
+    /**
+     * Finds the first character position where the two URIs differ and returns
+     * a human-readable hint so the caller can spot typos or trailing slashes.
+     */
+    private String buildNamespaceDiffHint(String a, String b) {
+        if (a == null || b == null) {
+            return "";
+        }
+        int minLen = Math.min(a.length(), b.length());
+        for (int i = 0; i < minLen; i++) {
+            if (a.charAt(i) != b.charAt(i)) {
+                return " | First difference at character " + (i + 1)
+                        + " (XML='" + a.charAt(i) + "' vs XSD='" + b.charAt(i) + "')";
+            }
+        }
+        if (a.length() != b.length()) {
+            // One is a prefix of the other — likely trailing slash or version suffix
+            String longer = a.length() > b.length() ? "XML" : "XSD";
+            String extra = a.length() > b.length()
+                    ? a.substring(minLen) : b.substring(minLen);
+            return " | URIs share a common prefix; " + longer + " has extra suffix \"" + extra + "\"";
+        }
+        return "";
     }
 
     private void evaluatePresenceAndNulls(XsdAnalysisResult xsd, XmlAnalysisResult xml, ValidationResult result) {
@@ -65,17 +106,16 @@ public class CrossValidator {
             observedNames.add(observation.getName());
         }
 
+        Set<String> knownNames = new HashSet<>();
+        for (ElementDefinition definition : xsd.getElements()) {
+            knownNames.add(definition.getName());
+        }
+
         for (ElementDefinition definition : xsd.getElements()) {
             if (definition.getXPath().equals("/" + xsd.getRootElementName())) {
                 continue;
             }
-            String xmlPath = definition.getXPath();
-            if (!xmlPath.startsWith("/" + xsd.getRootElementName()) && xsd.getSingleChildElementName() != null) {
-                xmlPath = "/" + xsd.getSingleChildElementName() + xmlPath.substring(("/" + xsd.getRootElementName()).length());
-            } else if (xmlPath.startsWith("/" + xsd.getRootElementName()) && xsd.getSingleChildElementName() != null
-                    && !xml.getRootElementName().equals(xsd.getRootElementName())) {
-                xmlPath = "/" + xsd.getSingleChildElementName() + xmlPath.substring(("/" + xsd.getRootElementName() + "/" + xsd.getSingleChildElementName()).length());
-            }
+            String xmlPath = resolveXmlPath(definition.getXPath(), xsd, xml);
             XmlElementObservation observation = observationsByPath.get(xmlPath);
             if (observation == null) {
                 if (definition.isRequired()) {
@@ -95,24 +135,52 @@ public class CrossValidator {
                 result.addRequiredNullElement(xmlPath);
                 result.addIssue(new Issue(Severity.CRITICAL, "CrossValidation",
                         "Required XSD element is null or empty in the XML.", xmlPath,
-                        "Populate the required value to avoid BODS row-level NULL output."));
+                        "Populate the required value to avoid BODS row-level NULL output.",
+                        observation.getLine(), observation.getColumn()));
             } else if (!definition.isRequired() && (observation.isEmpty() || observation.hasNilAttribute())) {
                 result.addIssue(new Issue(Severity.INFO, "CrossValidation",
                         "Optional XSD element is null or empty in the XML.", xmlPath,
-                        "Optional field may be left empty if business rules allow it."));
+                        "Optional field may be left empty if business rules allow it.",
+                        observation.getLine(), observation.getColumn()));
             }
         }
 
-        Set<String> knownNames = new HashSet<>();
-        for (ElementDefinition definition : xsd.getElements()) {
-            knownNames.add(definition.getName());
-        }
         for (XmlElementObservation observation : xml.getElementObservations()) {
-            if (!knownNames.contains(observation.getName())) {
-                result.addUnknownXmlElement(observation.getXPath());
-                result.addIssue(new Issue(Severity.WARNING, "CrossValidation",
-                        "XML element is present in data but not defined in the XSD.", observation.getXPath(),
-                        "Remove the element or update the schema."));
+            if (knownNames.contains(observation.getName())) {
+                // Known name — check per-element namespace if the XSD declares one
+                String xsdNs = emptyToNull(xsd.getRootNamespace());
+                String elemNs = emptyToNull(observation.getNamespaceUri());
+                if (xsdNs != null && elemNs != null && !xsdNs.equals(elemNs)) {
+                    String diffHint = buildNamespaceDiffHint(elemNs, xsdNs);
+                    result.addIssue(new Issue(Severity.WARNING, "CrossValidation",
+                            "Element <" + observation.getName() + "> is in namespace \""
+                            + elemNs + "\" but the XSD declares namespace \""
+                            + xsdNs + "\"." + diffHint,
+                            observation.getXPath(),
+                            "Ensure the element uses the correct namespace URI.",
+                            observation.getLine(), observation.getColumn()));
+                }
+            } else {
+                // Name not in XSD at all — check if it could be a namespace-prefix issue
+                String strippedName = stripPrefix(observation.getName());
+                if (!strippedName.equals(observation.getName()) && knownNames.contains(strippedName)) {
+                    // Qualified name was used in XML but XSD uses the local name — namespace mismatch
+                    result.addUnknownXmlElement(observation.getXPath());
+                    result.addIssue(new Issue(Severity.WARNING, "CrossValidation",
+                            "Element <" + observation.getName() + "> appears to be a namespace-qualified form "
+                            + "of <" + strippedName + "> which is defined in the XSD. "
+                            + "Remove the namespace prefix or add the namespace to the schema.",
+                            observation.getXPath(),
+                            "Check the namespace prefix used in the XML against the XSD targetNamespace.",
+                            observation.getLine(), observation.getColumn()));
+                } else {
+                    result.addUnknownXmlElement(observation.getXPath());
+                    result.addIssue(new Issue(Severity.WARNING, "CrossValidation",
+                            "XML element <" + observation.getName() + "> is present in data but not defined in the XSD.",
+                            observation.getXPath(),
+                            "Remove the element or update the schema.",
+                            observation.getLine(), observation.getColumn()));
+                }
             }
         }
     }
@@ -120,12 +188,7 @@ public class CrossValidator {
     private void evaluateDataTypes(XsdAnalysisResult xsd, XmlAnalysisResult xml, ValidationResult result) {
         Map<String, String> expectedTypes = new HashMap<>();
         for (ElementDefinition definition : xsd.getElements()) {
-            String xmlPath = definition.getXPath();
-            if (xsd.getSingleChildElementName() != null && !xml.getRootElementName().equals(xsd.getRootElementName())
-                    && xmlPath.startsWith("/" + xsd.getRootElementName() + "/" + xsd.getSingleChildElementName())) {
-                xmlPath = "/" + xsd.getSingleChildElementName() + xmlPath.substring(("/" + xsd.getRootElementName()
-                        + "/" + xsd.getSingleChildElementName()).length());
-            }
+            String xmlPath = resolveXmlPath(definition.getXPath(), xsd, xml);
             expectedTypes.put(xmlPath, definition.getDataType());
         }
 
@@ -134,16 +197,45 @@ public class CrossValidator {
                 continue;
             }
             String expectedType = expectedTypes.get(observation.getXPath());
-            if (expectedType == null || expectedType.isBlank() || "xs:string".equals(expectedType) || "untyped".equals(expectedType)) {
+            if (expectedType == null || expectedType.isBlank()
+                    || "xs:string".equals(expectedType) || "untyped".equals(expectedType)) {
                 continue;
             }
             if (!isValidType(observation.getTextValue(), expectedType)) {
                 result.addTypeMismatchElement(observation.getXPath());
                 result.addIssue(new Issue(Severity.ERROR, "CrossValidation",
-                        "XML value does not match expected XSD type '" + expectedType + "': " + observation.getTextValue(),
-                        observation.getXPath(), "Correct the value or update the schema definition."));
+                        "XML value does not match expected XSD type '" + expectedType + "': "
+                        + observation.getTextValue(),
+                        observation.getXPath(),
+                        "Correct the value or update the schema definition.",
+                        observation.getLine(), observation.getColumn()));
             }
         }
+    }
+
+    private String resolveXmlPath(String xsdPath, XsdAnalysisResult xsd, XmlAnalysisResult xml) {
+        if (xsd.getSingleChildElementName() == null) {
+            return xsdPath;
+        }
+        String xsdRootPrefix = "/" + xsd.getRootElementName();
+        String xsdChildPrefix = xsdRootPrefix + "/" + xsd.getSingleChildElementName();
+        if (!xml.getRootElementName().equals(xsd.getRootElementName())) {
+            // XML root is the child element — strip the wrapper prefix
+            if (xsdPath.startsWith(xsdChildPrefix)) {
+                return "/" + xsd.getSingleChildElementName()
+                        + xsdPath.substring(xsdChildPrefix.length());
+            }
+            if (xsdPath.startsWith(xsdRootPrefix)) {
+                return "/" + xsd.getSingleChildElementName()
+                        + xsdPath.substring(xsdRootPrefix.length());
+            }
+        }
+        return xsdPath;
+    }
+
+    private String stripPrefix(String name) {
+        int colon = name.indexOf(':');
+        return colon >= 0 ? name.substring(colon + 1) : name;
     }
 
     private boolean isValidType(String value, String xsdType) {

@@ -18,6 +18,7 @@ public class XsdAnalysisResult {
     private final List<String> namespaceDeclarations = new ArrayList<>();
     private final List<ElementDefinition> elements = new ArrayList<>();
     private final List<Issue> issues = new ArrayList<>();
+    private final List<String> resolvedImportedSchemaPaths = new ArrayList<>();
 
     public String getRootElementName() {
         return rootElementName;
@@ -121,5 +122,13 @@ public class XsdAnalysisResult {
 
     public void addIssue(Issue issue) {
         this.issues.add(issue);
+    }
+
+    public List<String> getResolvedImportedSchemaPaths() {
+        return Collections.unmodifiableList(resolvedImportedSchemaPaths);
+    }
+
+    public void addResolvedImportedSchemaPath(String path) {
+        this.resolvedImportedSchemaPaths.add(path);
     }
 }

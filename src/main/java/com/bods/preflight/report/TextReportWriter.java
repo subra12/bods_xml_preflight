@@ -42,8 +42,18 @@ public class TextReportWriter {
                 .append("  Total Elements      : ").append(report.getXsdAnalysis().getTotalElements()).append(System.lineSeparator())
                 .append("  Required Elements   : ").append(report.getXsdAnalysis().getTotalRequiredElements()).append(System.lineSeparator())
                 .append("  Optional Elements   : ").append(report.getXsdAnalysis().getTotalOptionalElements()).append(System.lineSeparator())
-                .append("  Max Nesting Depth   : ").append(report.getXsdAnalysis().getMaxNestingDepth()).append(System.lineSeparator())
-                .append(System.lineSeparator());
+                .append("  Max Nesting Depth   : ").append(report.getXsdAnalysis().getMaxNestingDepth()).append(System.lineSeparator());
+
+        List<String> importedPaths = report.getXsdAnalysis().getResolvedImportedSchemaPaths();
+        if (!importedPaths.isEmpty()) {
+            builder.append("  Imported Schemas    :").append(System.lineSeparator());
+            for (String path : importedPaths) {
+                builder.append("    + ").append(path).append(System.lineSeparator());
+            }
+        }
+
+        writeIssueList(builder, report.getXsdAnalysis().getIssues(), report.isVerbose());
+        builder.append(System.lineSeparator());
     }
 
     private void writeXmlSection(StringBuilder builder, DiagnosticReport report) {
@@ -66,12 +76,17 @@ public class TextReportWriter {
     }
 
     private void writeCrossValidationSection(StringBuilder builder, DiagnosticReport report) {
+        ParameterRecommendations rec = report.getParameterRecommendations();
+        String rootMatchLine = report.getValidationResult().getRootMatchExplanation();
+
         builder.append("SECTION C: CROSS-VALIDATION").append(System.lineSeparator()).append(System.lineSeparator())
-                .append("  Root Match          : ").append(report.getValidationResult().getRootMatchExplanation()).append(System.lineSeparator())
+                .append("  Root Match          : ").append(rootMatchLine).append(System.lineSeparator())
+                .append("  is_top_level_element: ").append(value(rec.getIsTopLevelElement()))
+                .append("  (").append(value(rec.getIsTopLevelElementExplanation())).append(")").append(System.lineSeparator())
                 .append("  Required Fields     : ").append(report.getValidationResult().getRequiredNullElements().size()).append(" CRITICAL issue(s) found").append(System.lineSeparator())
                 .append("  Unknown Elements    : ").append(statusFromList(report.getValidationResult().getUnknownXmlElements())).append(System.lineSeparator())
                 .append("  Data Types          : ").append(statusFromList(report.getValidationResult().getTypeMismatchElements())).append(System.lineSeparator())
-                .append("  Namespace           : ").append(report.getValidationResult().isNamespaceMatch() ? "PASS" : "WARNING").append(System.lineSeparator());
+                .append("  Namespace           : ").append(report.getValidationResult().isNamespaceMatch() ? "PASS" : "WARNING — see issues below").append(System.lineSeparator());
         writeIssueList(builder, report.getValidationResult().getIssues(), true);
         builder.append(System.lineSeparator());
     }
@@ -132,9 +147,12 @@ public class TextReportWriter {
             if (!includeInfo && issue.getSeverity() == Severity.INFO) {
                 continue;
             }
-            builder.append("    [").append(issue.getSeverity()).append("] ")
-                    .append(value(issue.getXPath())).append("  ")
-                    .append(issue.getMessage());
+            builder.append("    [").append(issue.getSeverity()).append("] ");
+            if (issue.hasLocation()) {
+                builder.append("line ").append(issue.getLine())
+                        .append(" col ").append(issue.getColumn()).append("  ");
+            }
+            builder.append(value(issue.getXPath())).append("  ").append(issue.getMessage());
             if (issue.getRecommendation() != null && !issue.getRecommendation().isBlank()) {
                 builder.append(" Recommendation: ").append(issue.getRecommendation());
             }

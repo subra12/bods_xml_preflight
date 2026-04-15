@@ -6,11 +6,22 @@ import com.bods.preflight.model.XmlAnalysisResult;
 import com.bods.preflight.model.XmlElementObservation;
 import com.bods.preflight.util.Constants;
 import com.bods.preflight.util.XmlUtils;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.Attributes;
+import org.xml.sax.Locator;
+import org.xml.sax.helpers.DefaultHandler;
 
 public class XmlAnalyzer {
     public XmlAnalysisResult analyze(Path xmlPath, String forcedEncoding) throws Exception {
@@ -37,17 +48,61 @@ public class XmlAnalyzer {
                     null, "Set xml_header in load_to_xml() to the exact XML declaration string."));
         }
 
+        Map<String, int[]> locationMap = buildLocationMap(bytes, encoding);
+
         Document document = XmlUtils.parseXml(bytes, encoding);
         Element root = document.getDocumentElement();
         result.setRootElementName(root.getLocalName() != null ? root.getLocalName() : root.getNodeName());
         result.setRootNamespace(root.getNamespaceURI());
         result.setRootDirectChildCount(countChildElements(root));
         result.setSingleRepeatingChildType(hasSingleChildType(root));
-        traverse(root, "/" + result.getRootElementName(), 1, result);
+        traverse(root, "/" + result.getRootElementName(), 1, result, locationMap);
         return result;
     }
 
-    private void traverse(Element element, String path, int depth, XmlAnalysisResult result) {
+    private Map<String, int[]> buildLocationMap(byte[] bytes, String encoding) {
+        Map<String, int[]> map = new HashMap<>();
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setNamespaceAware(true);
+            SAXParser parser = factory.newSAXParser();
+            DefaultHandler handler = new DefaultHandler() {
+                private Locator locator;
+                private final Deque<String> pathStack = new ArrayDeque<>();
+
+                @Override
+                public void setDocumentLocator(Locator locator) {
+                    this.locator = locator;
+                }
+
+                @Override
+                public void startElement(String uri, String localName, String qName, Attributes attrs) {
+                    String name = localName != null && !localName.isBlank() ? localName : qName;
+                    String parentPath = pathStack.isEmpty() ? "" : pathStack.peek();
+                    String currentPath = parentPath + "/" + name;
+                    if (!map.containsKey(currentPath) && locator != null) {
+                        map.put(currentPath, new int[]{locator.getLineNumber(), locator.getColumnNumber()});
+                    }
+                    pathStack.push(currentPath);
+                }
+
+                @Override
+                public void endElement(String uri, String localName, String qName) {
+                    if (!pathStack.isEmpty()) {
+                        pathStack.pop();
+                    }
+                }
+            };
+            String decoded = XmlUtils.decode(bytes, encoding);
+            parser.parse(new ByteArrayInputStream(decoded.getBytes(StandardCharsets.UTF_8)), handler);
+        } catch (Exception ignored) {
+            // Location map is best-effort; DOM parsing will still proceed normally.
+        }
+        return map;
+    }
+
+    private void traverse(Element element, String path, int depth, XmlAnalysisResult result,
+            Map<String, int[]> locationMap) {
         String name = element.getLocalName() != null ? element.getLocalName() : element.getNodeName();
         String text = element.getTextContent() == null ? "" : element.getTextContent().trim();
         boolean hasChildElements = countChildElements(element) > 0;
@@ -55,6 +110,9 @@ public class XmlAnalyzer {
         boolean nilAttribute = "true".equalsIgnoreCase(element.getAttributeNS("http://www.w3.org/2001/XMLSchema-instance", "nil"))
                 || "true".equalsIgnoreCase(element.getAttribute("xsi:nil"));
         boolean empty = !hasChildElements && !hasTextContent && !nilAttribute;
+
+        int[] loc = locationMap.getOrDefault(path, new int[]{-1, -1});
+        String namespaceUri = element.getNamespaceURI();
 
         result.incrementElementCount(name);
         if (depth > result.getMaxNestingDepth()) {
@@ -67,14 +125,15 @@ public class XmlAnalyzer {
             result.incrementEmptyElements();
         }
 
-        XmlElementObservation observation =
-                new XmlElementObservation(name, path, text, hasTextContent, hasChildElements, empty, nilAttribute, depth);
+        XmlElementObservation observation = new XmlElementObservation(
+                name, path, text, hasTextContent, hasChildElements, empty, nilAttribute, depth,
+                namespaceUri, loc[0], loc[1]);
         result.addObservation(observation);
 
         if (nilAttribute || empty) {
-            Severity severity = Severity.INFO;
-            result.addIssue(new Issue(severity, "XML", "XML element is null or empty.", path,
-                    "Review whether this element is allowed to be null in the schema."));
+            result.addIssue(new Issue(Severity.INFO, "XML", "XML element is null or empty.", path,
+                    "Review whether this element is allowed to be null in the schema.",
+                    loc[0], loc[1]));
         }
 
         NodeList nodes = element.getChildNodes();
@@ -83,7 +142,7 @@ public class XmlAnalyzer {
             if (node instanceof Element) {
                 Element child = (Element) node;
                 String childName = child.getLocalName() != null ? child.getLocalName() : child.getNodeName();
-                traverse(child, path + "/" + childName, depth + 1, result);
+                traverse(child, path + "/" + childName, depth + 1, result, locationMap);
             }
         }
     }

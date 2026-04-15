@@ -73,6 +73,7 @@ public class XsdAnalyzer {
                 visited.add(canonical);
                 Document importedDoc = XmlUtils.parseXml(XmlUtils.readAllBytes(importedPath), "UTF-8");
                 Element importedSchema = importedDoc.getDocumentElement();
+                result.addResolvedImportedSchemaPath(importedPath.toAbsolutePath().toString());
                 collectImportedElements(importedSchema, result);
                 processImportsAndIncludes(importedSchema, importedPath, result, visited);
             } catch (Exception e) {
