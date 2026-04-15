@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: imported-address.xsd
+     Purpose: secondary schema imported by root-with-import.xsd.
+              Defines address, street, and city so the cross-validator can
+              verify those names are recognised without producing unknown-element warnings.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="address">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="street" type="xs:string" minOccurs="1"/>
+        <xs:element name="city"   type="xs:string" minOccurs="1"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

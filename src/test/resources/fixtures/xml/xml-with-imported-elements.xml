@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: xml-with-imported-elements.xml
+     Purpose: XML whose elements (street, city) are defined in an imported XSD.
+              Paired with root-with-import.xsd.
+              Expected: no unknown-element WARNING for street or city.
+-->
+<customer>
+  <customerId>42</customerId>
+  <address>
+    <street>123 Main Street</street>
+    <city>Springfield</city>
+  </address>
+</customer>

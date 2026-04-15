@@ -191,4 +191,23 @@ class CrossValidatorTest {
                         && i.getMessage().contains("Namespace"));
         assertFalse(hasNamespaceWarning);
     }
+
+    // -----------------------------------------------------------------------
+    // xs:import / xs:include — no false unknown-element warnings
+    // -----------------------------------------------------------------------
+
+    @Test
+    void elementsFromImportedSchemaShouldNotProduceUnknownElementWarning() throws Exception {
+        // root-with-import.xsd imports imported-address.xsd which defines address, street, city.
+        // xml-with-imported-elements.xml uses all three — none should be flagged as unknown.
+        ValidationResult result = validate("root-with-import.xsd", "xml-with-imported-elements.xml");
+
+        boolean hasUnknownWarning = result.getIssues().stream()
+                .anyMatch(i -> i.getSeverity() == Severity.WARNING
+                        && i.getMessage().contains("not defined in the XSD"));
+        assertFalse(hasUnknownWarning,
+                "Elements defined in an imported schema must not produce unknown-element warnings");
+        assertTrue(result.getUnknownXmlElements().isEmpty(),
+                "unknownXmlElements list must be empty when all elements are covered by imports");
+    }
 }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Fixture: root-with-import.xsd
+     Purpose: prove that xs:import is followed and its elements are added to the
+              known-element inventory so the cross-validator does not raise
+              spurious unknown-element warnings.
+     Imports:  imported-address.xsd  (defines address, street, city)
+     Expected: XsdAnalysisResult.getElements() contains address, street, city
+               in addition to customer and customerId.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:import schemaLocation="imported-address.xsd"/>
+  <xs:element name="customer">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="customerId" type="xs:integer" minOccurs="1"/>
+        <xs:element name="address"    minOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="street" type="xs:string" minOccurs="1"/>
+              <xs:element name="city"   type="xs:string" minOccurs="1"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

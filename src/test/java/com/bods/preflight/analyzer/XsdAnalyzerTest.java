@@ -168,6 +168,23 @@ class XsdAnalyzerTest {
     }
 
     // -----------------------------------------------------------------------
+    // xs:import / xs:include resolution
+    // -----------------------------------------------------------------------
+
+    @Test
+    void importedSchemaElementsShouldBeInElementInventory() throws Exception {
+        XsdAnalysisResult result = analyzer.analyze(xsd("root-with-import.xsd"));
+
+        // Elements defined in imported-address.xsd must appear in the inventory.
+        assertTrue(result.getElements().stream().anyMatch(e -> "address".equals(e.getName())),
+                "address (from imported schema) must be in element inventory");
+        assertTrue(result.getElements().stream().anyMatch(e -> "street".equals(e.getName())),
+                "street (from imported schema) must be in element inventory");
+        assertTrue(result.getElements().stream().anyMatch(e -> "city".equals(e.getName())),
+                "city (from imported schema) must be in element inventory");
+    }
+
+    // -----------------------------------------------------------------------
     // Helper
     // -----------------------------------------------------------------------
 
