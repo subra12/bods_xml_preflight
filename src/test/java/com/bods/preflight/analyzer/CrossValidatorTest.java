@@ -33,9 +33,11 @@ class CrossValidatorTest {
     }
 
     private ValidationResult validate(String xsdName, String xmlName) throws Exception {
-        XsdAnalysisResult xsdResult = xsdAnalyzer.analyze(xsd(xsdName));
-        XmlAnalysisResult xmlResult = xmlAnalyzer.analyze(xml(xmlName), null);
-        return validator.validate(xsdResult, xmlResult);
+        Path xsdPath = xsd(xsdName);
+        Path xmlPath = xml(xmlName);
+        XsdAnalysisResult xsdResult = xsdAnalyzer.analyze(xsdPath);
+        XmlAnalysisResult xmlResult = xmlAnalyzer.analyze(xmlPath, null);
+        return validator.validate(xsdResult, xmlResult, xmlPath, xsdPath);
     }
 
     // -----------------------------------------------------------------------
@@ -209,5 +211,39 @@ class CrossValidatorTest {
                 "Elements defined in an imported schema must not produce unknown-element warnings");
         assertTrue(result.getUnknownXmlElements().isEmpty(),
                 "unknownXmlElements list must be empty when all elements are covered by imports");
+    }
+
+    // -----------------------------------------------------------------------
+    // W3C full schema validation
+    // -----------------------------------------------------------------------
+
+    @Test
+    void w3cValidationShouldPassForValidXml() throws Exception {
+        ValidationResult result = validate("root-direct.xsd", "xml-root-matches-root.xml");
+
+        boolean hasW3cError = result.getIssues().stream()
+                .anyMatch(i -> "W3C".equals(i.getCategory())
+                        && (i.getSeverity() == Severity.ERROR || i.getSeverity() == Severity.CRITICAL));
+        assertFalse(hasW3cError, "Valid XML must produce no W3C errors");
+    }
+
+    @Test
+    void w3cValidationShouldCatchTypeMismatches() throws Exception {
+        ValidationResult result = validate("typed-fields.xsd", "xml-type-mismatch.xml");
+
+        boolean hasW3cError = result.getIssues().stream()
+                .anyMatch(i -> "W3C".equals(i.getCategory())
+                        && i.getSeverity() == Severity.ERROR);
+        assertTrue(hasW3cError, "Type-mismatched XML must produce W3C ERROR issues");
+    }
+
+    @Test
+    void w3cIssuesShouldCarryLineNumbers() throws Exception {
+        ValidationResult result = validate("typed-fields.xsd", "xml-type-mismatch.xml");
+
+        boolean hasLocation = result.getIssues().stream()
+                .filter(i -> "W3C".equals(i.getCategory()))
+                .anyMatch(i -> i.hasLocation());
+        assertTrue(hasLocation, "W3C issues must include line/column from SAXParseException");
     }
 }

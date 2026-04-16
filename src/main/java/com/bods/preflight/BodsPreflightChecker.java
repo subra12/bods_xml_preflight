@@ -7,7 +7,6 @@ import com.bods.preflight.analyzer.XsdAnalyzer;
 import com.bods.preflight.cli.CommandLineOptions;
 import com.bods.preflight.cli.CommandLineParser;
 import com.bods.preflight.model.DiagnosticReport;
-import com.bods.preflight.model.Issue;
 import com.bods.preflight.model.Severity;
 import com.bods.preflight.report.HtmlReportWriter;
 import com.bods.preflight.report.TextReportWriter;
@@ -40,7 +39,8 @@ public class BodsPreflightChecker {
 
             report.setXsdAnalysis(xsdAnalyzer.analyze(options.getXsdPath()));
             report.setXmlAnalysis(xmlAnalyzer.analyze(options.getXmlPath(), options.getForcedEncoding()));
-            report.setValidationResult(validator.validate(report.getXsdAnalysis(), report.getXmlAnalysis()));
+            report.setValidationResult(validator.validate(report.getXsdAnalysis(), report.getXmlAnalysis(),
+                    options.getXmlPath(), options.getXsdPath()));
             report.setParameterRecommendations(recommender.recommend(report));
 
             String output = buildOutput(report, options.getFormat());

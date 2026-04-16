@@ -7,7 +7,9 @@ import com.bods.preflight.model.ValidationResult;
 import com.bods.preflight.model.XmlAnalysisResult;
 import com.bods.preflight.model.XmlElementObservation;
 import com.bods.preflight.model.XsdAnalysisResult;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,14 +18,23 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import javax.xml.XMLConstants;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import org.xml.sax.ErrorHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 public class CrossValidator {
-    public ValidationResult validate(XsdAnalysisResult xsd, XmlAnalysisResult xml) {
+    public ValidationResult validate(XsdAnalysisResult xsd, XmlAnalysisResult xml,
+            Path xmlPath, Path xsdPath) {
         ValidationResult result = new ValidationResult();
         evaluateRootMatch(xsd, xml, result);
         evaluateNamespace(xsd, xml, result);
         evaluatePresenceAndNulls(xsd, xml, result);
         evaluateDataTypes(xsd, xml, result);
+        evaluateW3cSchema(xmlPath, xsdPath, result);
         return result;
     }
 
@@ -210,6 +221,62 @@ public class CrossValidator {
                         "Correct the value or update the schema definition.",
                         observation.getLine(), observation.getColumn()));
             }
+        }
+    }
+
+    private void evaluateW3cSchema(Path xmlPath, Path xsdPath, ValidationResult result) {
+        if (result.isChildRootMatch()) {
+            // The XML root is the repeating child element (is_top_level_element=0).
+            // The W3C validator would always reject this because the XSD root is the
+            // wrapper element, not the child. Skip strict validation in this mode.
+            result.addIssue(new Issue(Severity.INFO, "W3C",
+                    "W3C schema validation skipped: XML root is the repeating child element "
+                    + "(is_top_level_element=0). The XSD wrapper root is not present in the XML, "
+                    + "which is expected for this BODS pattern.",
+                    null, "No action required."));
+            return;
+        }
+        try {
+            SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            Schema schema = factory.newSchema(new StreamSource(xsdPath.toFile()));
+            javax.xml.validation.Validator validator = schema.newValidator();
+            validator.setErrorHandler(new ErrorHandler() {
+                @Override
+                public void warning(SAXParseException e) {
+                    result.addIssue(new Issue(Severity.WARNING, "W3C",
+                            e.getMessage(), null,
+                            "Review this schema warning.",
+                            e.getLineNumber(), e.getColumnNumber()));
+                }
+
+                @Override
+                public void error(SAXParseException e) {
+                    result.addIssue(new Issue(Severity.ERROR, "W3C",
+                            e.getMessage(), null,
+                            "Fix this schema violation before loading to BODS.",
+                            e.getLineNumber(), e.getColumnNumber()));
+                }
+
+                @Override
+                public void fatalError(SAXParseException e) throws SAXException {
+                    result.addIssue(new Issue(Severity.CRITICAL, "W3C",
+                            e.getMessage(), null,
+                            "Fix this critical schema violation before loading to BODS.",
+                            e.getLineNumber(), e.getColumnNumber()));
+                    throw e;
+                }
+            });
+            validator.validate(new StreamSource(xmlPath.toFile()));
+        } catch (SAXParseException ignored) {
+            // Already captured by fatalError above.
+        } catch (SAXException e) {
+            result.addIssue(new Issue(Severity.ERROR, "W3C",
+                    "Schema validation failed: " + e.getMessage(), null,
+                    "Check the XSD schema for structural errors."));
+        } catch (IOException e) {
+            result.addIssue(new Issue(Severity.ERROR, "W3C",
+                    "Could not read files for W3C schema validation: " + e.getMessage(), null,
+                    "Ensure the XML and XSD files are readable."));
         }
     }
 

@@ -19,7 +19,8 @@ class TextReportWriterTest {
                 false);
         report.setXsdAnalysis(new XsdAnalyzer().analyze(report.getXsdFile()));
         report.setXmlAnalysis(new XmlAnalyzer().analyze(report.getXmlFile(), null));
-        report.setValidationResult(new CrossValidator().validate(report.getXsdAnalysis(), report.getXmlAnalysis()));
+        report.setValidationResult(new CrossValidator().validate(report.getXsdAnalysis(), report.getXmlAnalysis(),
+                report.getXmlFile(), report.getXsdFile()));
         report.setParameterRecommendations(new ParameterRecommender().recommend(report));
 
         String text = new TextReportWriter().write(report);
